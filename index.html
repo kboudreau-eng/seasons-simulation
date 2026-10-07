@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Sun-Earth Seasons & Viewpoint Simulation</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+            background-color: #0b0f19;
+            color: #f1f5f9;
+        }
+        /* Canvas container positioning */
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 4px;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow-sun {
+            box-shadow: 0 0 25px rgba(251, 191, 36, 0.4);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col md:flex-row overflow-hidden select-none">
+
+    <!-- Left Sidebar / Control Panel -->
+    <div class="z-10 w-full md:w-96 flex-shrink-0 glass-panel flex flex-col h-auto md:h-full max-h-screen border-r border-slate-800 overflow-y-auto">
+        <!-- App Title Header -->
+        <div class="p-4 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
+            <div>
+                <h1 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-earth-americas"></i> Seasons & Viewpoints
+                </h1>
+                <p class="text-xs text-slate-400">Mastering 3D Diagram Perspectives</p>
+            </div>
+            <span class="text-xs px-2 py-1 bg-amber-500/20 text-amber-300 rounded font-mono border border-amber-500/30">EduLab v2.5</span>
+        </div>
+
+        <!-- Mode Navigation Tabs -->
+        <div class="flex border-b border-slate-800 bg-slate-950/40 p-1 gap-1">
+            <button id="tab-teach" onclick="switchMode('teach')" class="flex-1 py-2 text-xs font-semibold rounded-md transition-all bg-amber-500 text-slate-950 shadow">
+                <i class="fa-solid fa-chalkboard-user mr-1"></i> Teach Mode
+            </button>
+            <button id="tab-quiz" onclick="switchMode('quiz')" class="flex-1 py-2 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                <i class="fa-solid fa-graduation-cap mr-1"></i> Quiz Mode
+            </button>
+            <button id="tab-lab" onclick="switchMode('lab')" class="flex-1 py-2 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                <i class="fa-solid fa-flask mr-1"></i> Tilt Lab
+            </button>
+        </div>
+
+        <!-- PANEL 1: TEACH MODE CONTENT -->
+        <div id="panel-teach" class="p-4 space-y-5 flex-1 overflow-y-auto">
+            
+            <!-- Strategy Guide Card -->
+            <div class="p-3 bg-amber-950/20 border border-amber-500/30 rounded-lg text-xs space-y-1.5">
+                <div class="font-bold text-amber-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-lightbulb"></i> 3-Step Universal Identification Strategy
+                </div>
+                <ol class="list-decimal list-inside space-y-1 text-slate-300 pl-1">
+                    <li>Locate the <strong>North Rotational Axis Pole</strong>.</li>
+                    <li>Observe if the North Pole leans <strong>TOWARD</strong> or <strong>AWAY</strong> from the Sun.</li>
+                    <li><strong>Toward = Northern Summer</strong> | <strong>Away = Northern Winter</strong> (Equinoxes lean sideways).</li>
+                </ol>
+            </div>
+
+            <!-- Position Selector Buttons -->
+            <div>
+                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Orbital Position</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="setOrbitalPosition(0)" class="pos-btn p-2 rounded border border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-left text-xs transition flex items-center justify-between">
+                        <span>A: June Solstice</span>
+                        <i class="fa-solid fa-sun text-amber-400 text-xs"></i>
+                    </button>
+                    <button onclick="setOrbitalPosition(Math.PI/2)" class="pos-btn p-2 rounded border border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-left text-xs transition flex items-center justify-between">
+                        <span>B: Sept Equinox</span>
+                        <i class="fa-solid fa-leaf text-amber-600 text-xs"></i>
+                    </button>
+                    <button onclick="setOrbitalPosition(Math.PI)" class="pos-btn p-2 rounded border border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-left text-xs transition flex items-center justify-between">
+                        <span>C: Dec Solstice</span>
+                        <i class="fa-solid fa-snowflake text-blue-400 text-xs"></i>
+                    </button>
+                    <button onclick="setOrbitalPosition(3*Math.PI/2)" class="pos-btn p-2 rounded border border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-left text-xs transition flex items-center justify-between">
+                        <span>D: March Equinox</span>
+                        <i class="fa-solid fa-seedling text-emerald-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Camera Viewpoint Presets (Key Solution for the Problem) -->
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Test Diagram Viewpoints</label>
+                    <span class="text-[10px] text-amber-400/80"><i class="fa-solid fa-rotate"></i> Try different angles!</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5 text-xs">
+                    <button onclick="setCameraPreset('isometric')" class="p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-cube text-slate-400"></i> Standard 3/4 Isometric
+                    </button>
+                    <button onclick="setCameraPreset('top')" class="p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-arrows-to-circle text-slate-400"></i> Top-Down (Polar View)
+                    </button>
+                    <button onclick="setCameraPreset('side')" class="p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-[#000] fa-border-all text-slate-400"></i> Ecliptic Side View
+                    </button>
+                    <button onclick="setCameraPreset('testA')" class="p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-file-lines text-slate-400"></i> Test Diagram View A
+                    </button>
+                    <button onclick="setCameraPreset('testB')" class="p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-file-lines text-slate-400"></i> Test Diagram View B
+                    </button>
+                    <button onclick="setCameraPreset('earthFocus')" class="p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass text-slate-400"></i> Earth Surface Focus
+                    </button>
+                </div>
+            </div>
+
+            <!-- Position Inspector / Explainer -->
+            <div id="teach-info-card" class="p-3.5 bg-slate-800/80 rounded-lg border border-slate-700 space-y-2">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+                    <h3 id="info-title" class="font-bold text-amber-300 text-sm">June Solstice Overview</h3>
+                    <span id="info-date" class="text-xs text-slate-400">Approx. June 21</span>
+                </div>
+                <div class="space-y-1.5 text-xs text-slate-300">
+                    <p id="info-tilt-desc"><strong>Axis Orientation:</strong> Northern Hemisphere tilts 23.5° directly TOWARD the Sun.</p>
+                    <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-700/60">
+                        <div class="p-2 bg-slate-900/60 rounded">
+                            <span class="text-amber-400 font-semibold block text-[11px]">Northern Hemisphere</span>
+                            <span id="info-nh-season" class="text-sm font-bold text-white">Summer</span>
+                            <span id="info-nh-detail" class="block text-[10px] text-slate-400 mt-0.5">Longest daylight, direct solar rays.</span>
+                        </div>
+                        <div class="p-2 bg-slate-900/60 rounded">
+                            <span class="text-cyan-400 font-semibold block text-[11px]">Southern Hemisphere</span>
+                            <span id="info-sh-season" class="text-sm font-bold text-white">Winter</span>
+                            <span id="info-sh-detail" class="block text-[10px] text-slate-400 mt-0.5">Shortest daylight, slanting rays.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Display Overlays Toggles -->
+            <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Visual Aids & Overlays</label>
+                <div class="space-y-1.5 text-xs">
+                    <label class="flex items-center justify-between p-2 rounded bg-slate-800/50 hover:bg-slate-800 cursor-pointer">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-arrows-up-down text-red-400"></i> Rotational Axis & N/S Poles</span>
+                        <input type="checkbox" id="chk-axis" checked onchange="toggleOverlay('axis')" class="rounded accent-amber-500 w-4 h-4">
+                    </label>
+                    <label class="flex items-center justify-between p-2 rounded bg-slate-800/50 hover:bg-slate-800 cursor-pointer">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-sun-plant-wilt text-amber-400"></i> Direct Sunlight Rays</span>
+                        <input type="checkbox" id="chk-rays" checked onchange="toggleOverlay('rays')" class="rounded accent-amber-500 w-4 h-4">
+                    </label>
+                    <label class="flex items-center justify-between p-2 rounded bg-slate-800/50 hover:bg-slate-800 cursor-pointer">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-circle-dot text-emerald-400"></i> Equator & Tropic Lines</span>
+                        <input type="checkbox" id="chk-equator" checked onchange="toggleOverlay('equator')" class="rounded accent-amber-500 w-4 h-4">
+                    </label>
+                    <label class="flex items-center justify-between p-2 rounded bg-slate-800/50 hover:bg-slate-800 cursor-pointer">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-moon text-indigo-400"></i> Day / Night Shadow</span>
+                        <input type="checkbox" id="chk-shadow" checked onchange="toggleOverlay('shadow')" class="rounded accent-amber-500 w-4 h-4">
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL 2: QUIZ MODE CONTENT -->
+        <div id="panel-quiz" class="p-4 space-y-4 flex-1 overflow-y-auto hidden">
+            <!-- Score Banner -->
+            <div class="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
+                <div>
+                    <span class="text-xs text-slate-400 block">Student Score</span>
+                    <span id="quiz-score" class="text-xl font-extrabold text-amber-400">0 / 0</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 block">Current Streak</span>
+                    <span id="quiz-streak" class="text-xl font-bold text-emerald-400">0 🔥</span>
+                </div>
+            </div>
+
+            <!-- Active Question Card -->
+            <div class="p-4 bg-slate-800/90 rounded-lg border border-amber-500/40 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Random Diagram View</span>
+                    <button onclick="generateQuestion()" class="text-xs text-amber-400 hover:underline"><i class="fa-solid fa-rotate"></i> New View</button>
+                </div>
+                
+                <p id="quiz-question-text" class="text-sm font-semibold text-slate-100 leading-snug">
+                    Looking at the current diagram perspective, what season is experienced in the <span class="text-amber-400 font-bold underline">Northern Hemisphere</span>?
+                </p>
+
+                <!-- Options -->
+                <div class="grid grid-cols-2 gap-2 pt-2">
+                    <button onclick="submitAnswer('Summer')" class="quiz-opt-btn p-3 bg-slate-700 hover:bg-slate-600 rounded font-semibold text-xs transition border border-slate-600">Summer</button>
+                    <button onclick="submitAnswer('Autumn')" class="quiz-opt-btn p-3 bg-slate-700 hover:bg-slate-600 rounded font-semibold text-xs transition border border-slate-600">Autumn</button>
+                    <button onclick="submitAnswer('Winter')" class="quiz-opt-btn p-3 bg-slate-700 hover:bg-slate-600 rounded font-semibold text-xs transition border border-slate-600">Winter</button>
+                    <button onclick="submitAnswer('Spring')" class="quiz-opt-btn p-3 bg-slate-700 hover:bg-slate-600 rounded font-semibold text-xs transition border border-slate-600">Spring</button>
+                </div>
+            </div>
+
+            <!-- Diagnostic Hint & Analysis Helper -->
+            <button id="btn-show-hint" onclick="toggleHint()" class="w-full py-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded flex items-center justify-center gap-2">
+                <i class="fa-solid fa-hands-holding-child text-amber-400"></i> Need help analyzing this perspective?
+            </button>
+
+            <div id="quiz-hint-box" class="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-lg text-xs space-y-2 hidden">
+                <div class="font-bold text-indigo-300"><i class="fa-solid fa-magnifying-glass"></i> Diagnostic Breakdown:</div>
+                <ul class="list-disc list-inside space-y-1 text-slate-300 pl-1">
+                    <li id="hint-step-1">Rotate 3D view if needed to locate the red axis line.</li>
+                    <li id="hint-step-2">Look at where the North Pole points relative to the yellow central Sun.</li>
+                    <li id="hint-step-3">Remember: Viewpoint angle does NOT change physical tilt in space!</li>
+                </ul>
+            </div>
+
+            <!-- Quiz Feedback Modal/Box -->
+            <div id="quiz-feedback" class="p-3 rounded-lg text-xs space-y-1 hidden">
+                <!-- Dynamic feedback injected here -->
+            </div>
+        </div>
+
+        <!-- PANEL 3: MISCONCEPTION LAB CONTENT -->
+        <div id="panel-lab" class="p-4 space-y-4 flex-1 overflow-y-auto hidden">
+            <div class="p-3 bg-amber-950/20 border border-amber-500/30 rounded-lg text-xs text-slate-300">
+                <strong class="text-amber-300 block mb-1"><i class="fa-solid fa-triangle-exclamation"></i> Common Student Misconception</strong>
+                Students often falsely believe seasons are caused by Earth being closer or further from the Sun during its orbit. Test axial tilt variables below to discover the true cause!
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-300 font-medium">Earth Axial Tilt Angle</span>
+                        <span id="lbl-tilt-val" class="text-amber-400 font-bold">23.5° (Actual Earth)</span>
+                    </div>
+                    <input type="range" id="slider-tilt" min="0" max="90" value="23.5" step="0.5" oninput="updateCustomTilt(this.value)" class="w-full accent-amber-500 bg-slate-700 h-1.5 rounded cursor-pointer">
+                    <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                        <span>0° (No Seasons)</span>
+                        <span>23.5° (Earth)</span>
+                        <span>90° (Uranus-like)</span>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-800/80 rounded border border-slate-700 space-y-2 text-xs">
+                    <div class="font-bold text-slate-200">Simulation Outcome:</div>
+                    <p id="lab-outcome-text" class="text-slate-300 leading-relaxed">
+                        With a 23.5° tilt, sunlight intensity varies across hemispheres throughout the orbit, producing distinct seasonal shifts.
+                    </p>
+                </div>
+
+                <div class="pt-2 border-t border-slate-800">
+                    <label class="flex items-center justify-between p-2 bg-slate-800/50 hover:bg-slate-800 rounded cursor-pointer text-xs">
+                        <span class="text-slate-300">Exaggerate Orbit Ellipse (Distance Myth)</span>
+                        <input type="checkbox" id="chk-eccentricity" onchange="toggleEccentricity(this.checked)" class="accent-amber-500 rounded">
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="p-3 border-t border-slate-800 bg-slate-950/60 text-[11px] text-slate-500 flex justify-between items-center">
+            <span>Science Curriculum Tool</span>
+            <span class="flex items-center gap-1"><i class="fa-solid fa-arrows-spin"></i> Interactive 3D</span>
+        </div>
+    </div>
+
+    <!-- Right Side: 3D Visualization Viewport -->
+    <div class="relative flex-1 h-full w-full bg-slate-950 overflow-hidden">
+        
+        <!-- 3D Canvas -->
+        <div id="canvas-container"></div>
+
+        <!-- On-Screen Viewport Helpers & Overlay Overlay -->
+        <div class="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+            <!-- View Mode Badge -->
+            <div class="px-3 py-1.5 glass-panel rounded-full text-xs font-semibold text-slate-300 flex items-center gap-2 border border-slate-700">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="viewport-badge">Perspective: Free 3D Orbit</span>
+            </div>
+
+            <!-- View Angle Preset Quick Bar -->
+            <div class="flex gap-1 bg-slate-900/80 p-1 rounded-lg border border-slate-800 shadow-lg">
+                <button onclick="setCameraPreset('isometric')" title="3/4 View" class="p-2 w-8 h-8 rounded hover:bg-slate-800 text-xs text-slate-300 flex items-center justify-center">3D</button>
+                <button onclick="setCameraPreset('top')" title="Top View" class="p-2 w-8 h-8 rounded hover:bg-slate-800 text-xs text-slate-300 flex items-center justify-center"><i class="fa-solid fa-arrow-down-long"></i></button>
+                <button onclick="setCameraPreset('side')" title="Side View" class="p-2 w-8 h-8 rounded hover:bg-slate-800 text-xs text-slate-300 flex items-center justify-center"><i class="fa-solid fa-arrows-left-right"></i></button>
+                <button onclick="resetCamera()" title="Reset Camera" class="p-2 w-8 h-8 rounded hover:bg-slate-800 text-xs text-amber-400 flex items-center justify-center"><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Orbit Speed & Playback Controls Bar -->
+        <div class="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 z-10 glass-panel p-2.5 rounded-xl border border-slate-800 flex items-center gap-3 max-w-md">
+            <button id="btn-play" onclick="toggleOrbitAnimation()" class="w-9 h-9 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold flex items-center justify-center shadow transition">
+                <i id="play-icon" class="fa-solid fa-play"></i>
+            </button>
+            <div class="flex-1">
+                <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                    <span>Orbital Motion Speed</span>
+                    <span id="lbl-speed">Paused</span>
+                </div>
+                <input type="range" id="slider-speed" min="0" max="0.02" value="0" step="0.001" oninput="updateOrbitSpeed(this.value)" class="w-full accent-amber-500 bg-slate-800 h-1.5 rounded cursor-pointer">
+            </div>
+        </div>
+
+        <!-- 3D Spatial Compass Helper (Bottom-Left) -->
+        <div class="absolute bottom-4 left-4 z-10 hidden md:block glass-panel px-3 py-2 rounded-lg text-[11px] text-slate-400 space-y-1 border border-slate-800 pointer-events-none">
+            <div class="font-bold text-slate-200"><i class="fa-solid fa-compass"></i> Spatial Orientation</div>
+            <div>North Axis Fixed in Space <span class="text-red-400 font-bold">( Polaris Direction )</span></div>
+            <div>Drag mouse/finger to orbit 3D camera.</div>
+        </div>
+    </div>
+
+    <script>
+        /* ----------------------------------------------------
+           GLOBAL SIMULATION STATE & THREE.JS VARIABLES
+        ---------------------------------------------------- */
+        let scene, camera, renderer, controls;
+        let sunMesh, earthMesh, earthPivot, earthGroup, orbitLine;
+        let axisLine, sunlightRaysGroup, equatorLine, shadowMesh;
+        let nhHighlight, shHighlight;
+
+        // Astronomical Constants & State
+        let currentMode = 'teach'; // 'teach', 'quiz', 'lab'
+        let orbitRadius = 14;
+        let currentAngle = 0; // 0 = June Solstice, PI/2 = Sept, PI = Dec, 3PI/2 = March
+        let orbitSpeed = 0;
+        let isAnimating = false;
+        let tiltAngleRad = 23.5 * (Math.PI / 180); // 23.5 degrees
+        let fixedAxisDirection = new THREE.Vector3(Math.sin(tiltAngleRad), Math.cos(tiltAngleRad), 0).normalize();
+
+        // Overlay Toggle States
+        let overlays = {
+            axis: true,
+            rays: true,
+            equator: true,
+            shadow: true
+        };
+
+        // Quiz State
+        let quizState = {
+            score: 0,
+            total: 0,
+            streak: 0,
+            targetAngle: 0,
+            targetHemisphere: 'Northern', // 'Northern' or 'Southern'
+            correctAnswer: 'Summer'
+        };
+
+        /* Custom Canvas Texture Generators to prevent external image dependency errors */
+        function createEarthTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            // Ocean background
+            ctx.fillStyle = '#1c3d5a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Continents approximate shapes (Green/Brown)
+            ctx.fillStyle = '#2d6a4f';
+
+            // North America
+            ctx.beginPath();
+            ctx.ellipse(250, 160, 120, 80, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // South America
+            ctx.beginPath();
+            ctx.ellipse(320, 340, 70, 110, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eurasia & Africa
+            ctx.beginPath();
+            ctx.ellipse(650, 170, 180, 100, 0, 0, Math.PI * 2);
+            ctx.ellipse(600, 300, 90, 110, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Australia
+            ctx.beginPath();
+            ctx.ellipse(820, 360, 60, 50, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Polar Caps (White)
+            ctx.fillStyle = '#f8fafc';
+            // North pole cap
+            ctx.fillRect(0, 0, canvas.width, 35);
+            // South pole cap
+            ctx.fillRect(0, canvas.height - 35, canvas.width, 35);
+
+            // Latitude lines for reference (Equator, Tropics)
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)'; // Equator Red
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+
+            // Tropic of Cancer
+            ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height * (1 - 23.5/90) / 2);
+            ctx.lineTo(canvas.width, canvas.height * (1 - 23.5/90) / 2);
+            ctx.stroke();
+
+            // Tropic of Capricorn
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height * (1 + 23.5/90) / 2);
+            ctx.lineTo(canvas.width, canvas.height * (1 + 23.5/90) / 2);
+            ctx.stroke();
+
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+
+        function createSunTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            const grad = ctx.createRadialGradient(128, 128, 10, 128, 128, 128);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.2, '#fef08a');
+            grad.addColorStop(0.6, '#f59e0b');
+            grad.addColorStop(1, '#b45309');
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 256, 256);
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x070a12);
+
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 18, 32);
+
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Orbit Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 80;
+            controls.minDistance = 5;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x334155, 1.2);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.PointLight(0xffffff, 2.5, 200);
+            sunLight.position.set(0, 0, 0);
+            scene.add(sunLight);
+
+            // Sun Mesh
+            const sunGeo = new THREE.SphereGeometry(3.2, 32, 32);
+            const sunMat = new THREE.MeshBasicMaterial({
+                map: createSunTexture(),
+                color: 0xffea00
+            });
+            sunMesh = new THREE.Mesh(sunGeo, sunMat);
+            scene.add(sunMesh);
+
+            // Sun Glow Effect
+            const glowGeo = new THREE.SphereGeometry(3.6, 32, 32);
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: 0xf59e0b,
+                transparent: true,
+                opacity: 0.25,
+                side: THREE.BackSide
+            });
+            scene.add(new THREE.Mesh(glowGeo, glowMat));
+
+            // Orbit Line
+            createOrbitLine();
+
+            // Earth Group Structure
+            // earthPivot moves around Sun along orbit. Inside it, earthGroup holds tilted Earth & Axis.
+            earthPivot = new THREE.Group();
+            scene.add(earthPivot);
+
+            earthGroup = new THREE.Group();
+            earthPivot.add(earthGroup);
+
+            // Earth Globe
+            const earthGeo = new THREE.SphereGeometry(1.6, 32, 32);
+            const earthMat = new THREE.MeshStandardMaterial({
+                map: createEarthTexture(),
+                roughness: 0.7,
+                metalness: 0.1
+            });
+            earthMesh = new THREE.Mesh(earthGeo, earthMat);
+            earthGroup.add(earthMesh);
+
+            // Rotational Axis Line (Red pole extending through North and South)
+            const axisGeo = new THREE.CylinderGeometry(0.06, 0.06, 5.2, 16);
+            const axisMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+            axisLine = new THREE.Mesh(axisGeo, axisMat);
+            earthGroup.add(axisLine);
+
+            // North Pole Marker (Small Cone)
+            const poleGeo = new THREE.ConeGeometry(0.2, 0.5, 16);
+            const poleMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+            const northPoleMarker = new THREE.Mesh(poleGeo, poleMat);
+            northPoleMarker.position.set(0, 2.7, 0);
+            earthGroup.add(northPoleMarker);
+
+            // Equatorial Line Ring
+            const equatorGeo = new THREE.RingGeometry(1.62, 1.68, 64);
+            const equatorMat = new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide });
+            equatorLine = new THREE.Mesh(equatorGeo, equatorMat);
+            equatorLine.rotation.x = Math.PI / 2;
+            earthGroup.add(equatorLine);
+
+            // Sunlight Ray Vectors (Rays from Sun hitting Earth)
+            sunlightRaysGroup = new THREE.Group();
+            scene.add(sunlightRaysGroup);
+            updateSunlightRays();
+
+            // Stars Background
+            createStarfield();
+
+            // Set initial position & camera tilt
+            updateEarthPosition();
+            setCameraPreset('isometric');
+
+            // Event listener for window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createOrbitLine() {
+            if (orbitLine) scene.remove(orbitLine);
+            const points = [];
+            const segments = 128;
+            for (let i = 0; i <= segments; i++) {
+                const theta = (i / segments) * Math.PI * 2;
+                points.push(new THREE.Vector3(Math.cos(theta) * orbitRadius, 0, Math.sin(theta) * orbitRadius));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.4 });
+            orbitLine = new THREE.Line(geometry, material);
+            scene.add(orbitLine);
+        }
+
+        function createStarfield() {
+            const starGeo = new THREE.BufferGeometry();
+            const count = 1000;
+            const positions = new Float32Array(count * 3);
+            for (let i = 0; i < count * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 300;
+            }
+            starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const starMat = new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.7 });
+            const starfield = new THREE.Points(starGeo, starMat);
+            scene.add(starfield);
+        }
+
+        function updateEarthPosition() {
+            // Position Earth along XZ orbit plane
+            const x = Math.cos(currentAngle) * orbitRadius;
+            const z = Math.sin(currentAngle) * orbitRadius;
+            earthPivot.position.set(x, 0, z);
+
+            // Apply Earth's fixed axial tilt in space
+            // The Earth's tilt vector remains fixed relative to space as it orbits
+            earthGroup.rotation.set(0, 0, -tiltAngleRad);
+
+            // Rotate Earth slightly on its axis for realistic self-spin
+            earthMesh.rotation.y += 0.01;
+
+            // Update sunlight ray positions
+            updateSunlightRays();
+
+            // Update teach mode UI info
+            updateTeachCard();
+        }
+
+        function updateSunlightRays() {
+            if (!sunlightRaysGroup) return;
+
+            // Clear previous rays
+            while (sunlightRaysGroup.children.length > 0) {
+                sunlightRaysGroup.remove(sunlightRaysGroup.children[0]);
+            }
+
+            if (!overlays.rays) return;
+
+            const earthPos = earthPivot.position;
+            const rayColor = 0xf59e0b;
+            const rayMaterial = new THREE.LineBasicMaterial({ color: rayColor, transparent: true, opacity: 0.6 });
+
+            // Create 5 parallel light rays pointing from Sun toward Earth
+            const offsets = [
+                { y: 0, zOffset: 0 },
+                { y: 0.8, zOffset: 0 },
+                { y: -0.8, zOffset: 0 },
+                { y: 0, zOffset: 0.8 },
+                { y: 0, zOffset: -0.8 }
+            ];
+
+            offsets.forEach(off => {
+                const start = new THREE.Vector3(0, off.y, off.zOffset);
+                const end = earthPos.clone().add(new THREE.Vector3(0, off.y, off.zOffset));
+                
+                // Shorten line to touch Earth surface
+                const dir = end.clone().sub(start).normalize();
+                const adjustedEnd = end.clone().sub(dir.multiplyScalar(1.6));
+
+                const geom = new THREE.BufferGeometry().setFromPoints([start, adjustedEnd]);
+                const line = new THREE.Line(geom, rayMaterial);
+                sunlightRaysGroup.add(line);
+            });
+        }
+
+        function setCameraPreset(preset) {
+            const badge = document.getElementById('viewport-badge');
+            
+            switch (preset) {
+                case 'isometric':
+                    animateCameraTo(18, 18, 26, "Perspective: 3/4 Isometric View");
+                    break;
+                case 'top':
+                    animateCameraTo(0, 36, 0.1, "Perspective: Top-Down Polar View");
+                    break;
+                case 'side':
+                    animateCameraTo(0, 2, 36, "Perspective: Ecliptic Side View");
+                    break;
+                case 'testA':
+                    // Angled view common on standardized tests where axis appears leaning right
+                    animateCameraTo(-20, 12, 22, "Perspective: Diagram View A (Angled Left)");
+                    break;
+                case 'testB':
+                    // Angled view where axis appears leaning left
+                    animateCameraTo(22, 10, -20, "Perspective: Diagram View B (Angled Right)");
+                    break;
+                case 'earthFocus':
+                    // Zoom close to Earth
+                    const ep = earthPivot.position;
+                    animateCameraTo(ep.x + 4, ep.y + 3, ep.z + 6, "Perspective: Earth Surface Focus");
+                    break;
+            }
+        }
+
+        function animateCameraTo(x, y, z, badgeText) {
+            const targetPos = new THREE.Vector3(x, y, z);
+            const startPos = camera.position.clone();
+            let progress = 0;
+
+            document.getElementById('viewport-badge').innerText = badgeText;
+
+            function animateCam() {
+                progress += 0.05;
+                if (progress <= 1) {
+                    camera.position.lerpVectors(startPos, targetPos, progress);
+                    controls.update();
+                    requestAnimationFrame(animateCam);
+                } else {
+                    camera.position.copy(targetPos);
+                    controls.update();
+                }
+            }
+            animateCam();
+        }
+
+        function resetCamera() {
+            setCameraPreset('isometric');
+            controls.target.set(0, 0, 0);
+        }
+
+        function setOrbitalPosition(angle) {
+            currentAngle = angle;
+            updateEarthPosition();
+            highlightPosBtn(angle);
+        }
+
+        function highlightPosBtn(angle) {
+            const buttons = document.querySelectorAll('.pos-btn');
+            buttons.forEach(btn => btn.classList.remove('bg-amber-500/20', 'border-amber-500'));
+            
+            // Map angle to button index
+            let idx = 0;
+            if (Math.abs(angle - Math.PI/2) < 0.1) idx = 1;
+            else if (Math.abs(angle - Math.PI) < 0.1) idx = 2;
+            else if (Math.abs(angle - 3*Math.PI/2) < 0.1) idx = 3;
+            
+            if (buttons[idx]) {
+                buttons[idx].classList.add('bg-amber-500/20', 'border-amber-500');
+            }
+        }
+
+        function updateTeachCard() {
+            const title = document.getElementById('info-title');
+            const date = document.getElementById('info-date');
+            const desc = document.getElementById('info-tilt-desc');
+            const nhSeason = document.getElementById('info-nh-season');
+            const nhDetail = document.getElementById('info-nh-detail');
+            const shSeason = document.getElementById('info-sh-season');
+            const shDetail = document.getElementById('info-sh-detail');
+
+            // Normalize angle to 0 - 2PI
+            const normAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+
+            if (normAngle < Math.PI / 4 || normAngle > 7 * Math.PI / 4) {
+                // June Solstice
+                title.innerText = "June Solstice";
+                date.innerText = "Approx. June 21";
+                desc.innerHTML = "<strong>Axis Orientation:</strong> North Pole leans directly <strong>TOWARD</strong> the Sun.";
+                nhSeason.innerText = "Summer";
+                nhSeason.className = "text-sm font-bold text-amber-400";
+                nhDetail.innerText = "Longest daylight hours, direct solar rays.";
+                shSeason.innerText = "Winter";
+                shSeason.className = "text-sm font-bold text-cyan-400";
+                shDetail.innerText = "Shortest daylight hours, slanted solar rays.";
+            } else if (normAngle >= Math.PI / 4 && normAngle < 3 * Math.PI / 4) {
+                // September Equinox
+                title.innerText = "September Equinox";
+                date.innerText = "Approx. Sept 22";
+                desc.innerHTML = "<strong>Axis Orientation:</strong> Axis tilts sideways relative to Sun. Neither pole leans toward Sun.";
+                nhSeason.innerText = "Autumn / Fall";
+                nhSeason.className = "text-sm font-bold text-amber-500";
+                nhDetail.innerText = "Equal day and night (12 hrs each).";
+                shSeason.innerText = "Spring";
+                shSeason.className = "text-sm font-bold text-emerald-400";
+                shDetail.innerText = "Equal day and night (12 hrs each).";
+            } else if (normAngle >= 3 * Math.PI / 4 && normAngle < 5 * Math.PI / 4) {
+                // December Solstice
+                title.innerText = "December Solstice";
+                date.innerText = "Approx. Dec 21";
+                desc.innerHTML = "<strong>Axis Orientation:</strong> North Pole leans directly <strong>AWAY</strong> from the Sun.";
+                nhSeason.innerText = "Winter";
+                nhSeason.className = "text-sm font-bold text-cyan-400";
+                nhDetail.innerText = "Shortest daylight hours, slanted solar rays.";
+                shSeason.innerText = "Summer";
+                shSeason.className = "text-sm font-bold text-amber-400";
+                shDetail.innerText = "Longest daylight hours, direct solar rays.";
+            } else {
+                // March Equinox
+                title.innerText = "March Equinox";
+                date.innerText = "Approx. March 20";
+                desc.innerHTML = "<strong>Axis Orientation:</strong> Axis tilts sideways relative to Sun. Both hemispheres receive equal solar energy.";
+                nhSeason.innerText = "Spring";
+                nhSeason.className = "text-sm font-bold text-emerald-400";
+                nhDetail.innerText = "Equal day and night (12 hrs each).";
+                shSeason.innerText = "Autumn / Fall";
+                shSeason.className = "text-sm font-bold text-amber-500";
+                shDetail.innerText = "Equal day and night (12 hrs each).";
+            }
+        }
+
+        function generateQuestion() {
+            // Randomize position angle to one of 4 main points or slight offset
+            const mainPositions = [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2];
+            quizState.targetAngle = mainPositions[Math.floor(Math.random() * mainPositions.length)];
+            
+            // Randomize target hemisphere
+            quizState.targetHemisphere = Math.random() > 0.5 ? 'Northern' : 'Southern';
+
+            // Randomize viewpoint perspective to challenge spatial reasoning
+            const presets = ['isometric', 'top', 'side', 'testA', 'testB'];
+            const randomPreset = presets[Math.floor(Math.random() * presets.length)];
+
+            // Set Earth position & camera angle
+            setOrbitalPosition(quizState.targetAngle);
+            setCameraPreset(randomPreset);
+
+            // Determine correct answer
+            const isNorth = quizState.targetHemisphere === 'Northern';
+            const angle = quizState.targetAngle;
+
+            if (angle === 0) {
+                quizState.correctAnswer = isNorth ? 'Summer' : 'Winter';
+            } else if (angle === Math.PI / 2) {
+                quizState.correctAnswer = isNorth ? 'Autumn' : 'Spring';
+            } else if (angle === Math.PI) {
+                quizState.correctAnswer = isNorth ? 'Winter' : 'Summer';
+            } else {
+                quizState.correctAnswer = isNorth ? 'Spring' : 'Autumn';
+            }
+
+            // Update Question UI
+            document.getElementById('quiz-question-text').innerHTML = `
+                Looking at this diagram viewpoint in space, what season is currently occurring in the 
+                <span class="text-amber-400 font-bold underline">${quizState.targetHemisphere} Hemisphere</span>?
+            `;
+
+            // Reset hint and feedback boxes
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('quiz-hint-box').classList.add('hidden');
+        }
+
+        function submitAnswer(chosenAnswer) {
+            quizState.total++;
+            const isCorrect = chosenAnswer === quizState.correctAnswer;
+            const feedbackBox = document.getElementById('quiz-feedback');
+
+            if (isCorrect) {
+                quizState.score++;
+                quizState.streak++;
+                feedbackBox.className = "p-3 rounded-lg text-xs space-y-1 bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 block";
+                feedbackBox.innerHTML = `
+                    <div class="font-bold text-emerald-400 flex items-center gap-1.5"><i class="fa-solid fa-circle-check"></i> Correct!</div>
+                    <div>Great job! You ignored the camera viewpoint and correctly identified the season based on axial tilt alignment relative to the Sun.</div>
+                `;
+            } else {
+                quizState.streak = 0;
+                feedbackBox.className = "p-3 rounded-lg text-xs space-y-1 bg-rose-950/60 border border-rose-500/40 text-rose-200 block";
+                feedbackBox.innerHTML = `
+                    <div class="font-bold text-rose-400 flex items-center gap-1.5"><i class="fa-solid fa-circle-xmark"></i> Incorrect</div>
+                    <div>The correct season for the <strong>${quizState.targetHemisphere} Hemisphere</strong> at this position is <strong>${quizState.correctAnswer}</strong>.</div>
+                    <div class="text-[11px] text-slate-300 mt-1">Tip: Click 'Need help analyzing?' to see the axis breakdown.</div>
+                `;
+            }
+
+            // Update score display
+            document.getElementById('quiz-score').innerText = `${quizState.score} / ${quizState.total}`;
+            document.getElementById('quiz-streak').innerText = `${quizState.streak} 🔥`;
+
+            // Auto advance question after delay if correct
+            if (isCorrect) {
+                setTimeout(() => {
+                    generateQuestion();
+                }, 2200);
+            }
+        }
+
+        function toggleHint() {
+            const hintBox = document.getElementById('quiz-hint-box');
+            hintBox.classList.toggle('hidden');
+
+            const isNorth = quizState.targetHemisphere === 'Northern';
+            const angle = quizState.targetAngle;
+
+            const s1 = document.getElementById('hint-step-1');
+            const s2 = document.getElementById('hint-step-2');
+            const s3 = document.getElementById('hint-step-3');
+
+            s1.innerText = "1. Locate the red line representing Earth's North Rotational Axis.";
+
+            if (angle === 0) {
+                s2.innerText = "2. The North Pole tilts TOWARD the Sun.";
+                s3.innerText = `3. Therefore: Northern Hemisphere = Summer | Southern Hemisphere = Winter.`;
+            } else if (angle === Math.PI) {
+                s2.innerText = "2. The North Pole tilts AWAY from the Sun.";
+                s3.innerText = `3. Therefore: Northern Hemisphere = Winter | Southern Hemisphere = Summer.`;
+            } else {
+                s2.innerText = "2. The axis tilts SIDEWAYS relative to the Sun (neither towards nor away).";
+                s3.innerText = `3. This position represents an Equinox (equal sunlight distribution).`;
+            }
+        }
+
+        function updateCustomTilt(val) {
+            tiltAngleRad = parseFloat(val) * (Math.PI / 180);
+            document.getElementById('lbl-tilt-val').innerText = `${val}°`;
+            
+            const outcomeText = document.getElementById('lab-outcome-text');
+            if (parseFloat(val) === 0) {
+                outcomeText.innerHTML = "<strong class='text-rose-400'>No Seasons!</strong> Without axial tilt, sunlight intensity remains constant year-round at every point on Earth as it orbits.";
+            } else if (parseFloat(val) === 23.5) {
+                outcomeText.innerHTML = "<strong class='text-emerald-400'>Earth's Natural Seasons:</strong> 23.5° tilt creates balanced seasonal variation with temperate zones.";
+            } else if (parseFloat(val) >= 80) {
+                outcomeText.innerHTML = "<strong class='text-amber-400'>Extreme Seasons (Uranus-style):</strong> One hemisphere faces scorching continuous daylight while the other suffers deep darkness for months!";
+            } else {
+                outcomeText.innerHTML = `Custom tilt of ${val}° adjusts seasonal severity. Higher tilt angles create more extreme seasonal temperature differences.`;
+            }
+
+            updateEarthPosition();
+        }
+
+        function toggleEccentricity(isExaggerated) {
+            if (isExaggerated) {
+                orbitRadius = 14;
+                // Deform orbit line slightly visually
+                orbitLine.scale.set(1.4, 1, 0.8);
+            } else {
+                orbitRadius = 14;
+                orbitLine.scale.set(1, 1, 1);
+            }
+            updateEarthPosition();
+        }
+
+        /* Mode Switching UI Handler */
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Hide all panels
+            document.getElementById('panel-teach').classList.add('hidden');
+            document.getElementById('panel-quiz').classList.add('hidden');
+            document.getElementById('panel-lab').classList.add('hidden');
+
+            // Reset tab styles
+            ['teach', 'quiz', 'lab'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                btn.className = "flex-1 py-2 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
+            });
+
+            // Activate chosen tab
+            const activeBtn = document.getElementById(`tab-${mode}`);
+            activeBtn.className = "flex-1 py-2 text-xs font-semibold rounded-md transition-all bg-amber-500 text-slate-950 shadow";
+
+            document.getElementById(`panel-${mode}`).classList.remove('hidden');
+
+            if (mode === 'quiz') {
+                generateQuestion();
+            } else {
+                setOrbitalPosition(0);
+                setCameraPreset('isometric');
+            }
+        }
+
+        /* Playback Controls & Toggles */
+        function toggleOrbitAnimation() {
+            isAnimating = !isAnimating;
+            const playIcon = document.getElementById('play-icon');
+            const lblSpeed = document.getElementById('lbl-speed');
+
+            if (isAnimating) {
+                playIcon.className = "fa-solid fa-pause";
+                if (orbitSpeed === 0) {
+                    orbitSpeed = 0.005;
+                    document.getElementById('slider-speed').value = 0.005;
+                }
+                lblSpeed.innerText = "Orbiting";
+            } else {
+                playIcon.className = "fa-solid fa-play";
+                lblSpeed.innerText = "Paused";
+            }
+        }
+
+        function updateOrbitSpeed(val) {
+            orbitSpeed = parseFloat(val);
+            const lblSpeed = document.getElementById('lbl-speed');
+            if (orbitSpeed > 0) {
+                isAnimating = true;
+                document.getElementById('play-icon').className = "fa-solid fa-pause";
+                lblSpeed.innerText = `Speed: ${(orbitSpeed * 1000).toFixed(0)}x`;
+            } else {
+                isAnimating = false;
+                document.getElementById('play-icon').className = "fa-solid fa-play";
+                lblSpeed.innerText = "Paused";
+            }
+        }
+
+        function toggleOverlay(type) {
+            overlays[type] = document.getElementById(`chk-${type}`).checked;
+            
+            if (type === 'axis') axisLine.visible = overlays.axis;
+            if (type === 'equator') equatorLine.visible = overlays.equator;
+            if (type === 'rays') updateSunlightRays();
+        }
+
+        /* Window Resize Event */
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isAnimating) {
+                currentAngle += orbitSpeed;
+                updateEarthPosition();
+            } else {
+                // Continuous subtle self-rotation of Earth
+                earthMesh.rotation.y += 0.008;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Initialize scene on window load
+        window.onload = function() {
+            initScene();
+            highlightPosBtn(0);
+            animate();
+        };
+    </script>
+</body>
+</html>
